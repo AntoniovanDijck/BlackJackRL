@@ -74,6 +74,13 @@ For those interested in diving deeper into reinforcement learning techniques and
 - Francois-Lavet, V., Henderson, P., Islam, R., Bellemare, M.G., & Pineau, J. (2018). *An Introduction to Deep Reinforcement Learning*. Foundations and Trends in Machine Learning.
 - Silver, D., et al. (2016). Mastering the game of Go with deep neural networks and tree search. *Nature*, 529(7587), 484-489.
 - Lillicrap, T.P., et al. (2016). Continuous control with deep reinforcement learning. *arXiv preprint arXiv:1509.02971*.
+- Playing Atari with Deep Reinforcement Learning. *arXiv preprint arXiv:1312.5602*.
+- Monte Carlo Sampling for regret minimization in extensive games. *arXiv preprint arXiv:1605.06808*.
+- Counterfactual Regret Minimization. *arXiv preprint arXiv:1301.5434*.
+- LabML: Counterfactual Regret Minimization. https://nn.labml.ai/cfr/
+- LabML: Deep Q Networks. https://nn.labml.ai/rl/dqn/
+- LabML: Reinforcement Learning. https://nn.labml.ai/rl/ 
+- LabML: Proximal Policy Optimization. https://nn.labml.ai/rl/ppo/
 
 This project is still a work in progress, and contributions are welcome. Whether you're interested in developing new algorithms, enhancing the simulation environment, or analyzing the strategies learned by the models, your input can help shape the future of BlackJackRL.
 
