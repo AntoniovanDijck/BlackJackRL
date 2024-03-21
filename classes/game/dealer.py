@@ -1,3 +1,8 @@
+# Dealer class
+# Antonio van Dyck
+# 21-03-2024
+# 
+
 from classes.game.player import Player
 
 class Dealer(Player):

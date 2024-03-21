@@ -2,6 +2,7 @@
 # Antonio van Dyck
 # 21-03-2024
 # 
+
 import random
 from classes.game.card import Card
 
