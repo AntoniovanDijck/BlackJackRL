@@ -51,7 +51,7 @@ python main.py
 - (More to be added as the project progresses)
 
 ## Project Structure
-- `blackjack_environment.py`: Defines the Blackjack game environment.
+- `game/blackjack.py`: Defines the Blackjack game environment.
 - `classes/algorithms`: Contains implementations of various reinforcement learning agents.
 - `weights/`: Stores the neural network models for agents (if applicable).
 - `helpers/`: Includes utility functions for data processing and visualization.
