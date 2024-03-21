@@ -2,7 +2,7 @@
 # BlackJackRL
 
 ## Overview
-BlackJackRL is a new project aimed at exploring and harnessing the power of Deep reinforcement learning techniques (RL) to master the game of Blackjack. 
+BlackJackRL is a new project aimed at exploring and harnessing the power of Deep Reinforcement Learning techniques (RL) to master the game of Blackjack. 
 
 By leveraging various state-of-the-art reinforcement learning algorithms and techniques, this project seeks to not only find the optimal strategy for Blackjack but also to push the boundaries of what's possible in the realm of RL. 
 
