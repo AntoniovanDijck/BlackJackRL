@@ -2,18 +2,28 @@
 # BlackJackRL
 
 ## Overview
-BlackJackRL is a cutting-edge project aimed at exploring and harnessing the power of reinforcement learning (RL) to master the game of Blackjack. By leveraging various state-of-the-art reinforcement learning algorithms and techniques, this project seeks to not only find the optimal strategy for Blackjack but also to push the boundaries of what's possible in the realm of RL. Through continuous experimentation and development, BlackJackRL will also contribute new algorithms to the field, enhancing the understanding and application of reinforcement learning in complex decision-making scenarios.
+BlackJackRL is a new project aimed at exploring and harnessing the power of Deep reinforcement learning techniques (RL) to master the game of Blackjack. 
+
+By leveraging various state-of-the-art reinforcement learning algorithms and techniques, this project seeks to not only find the optimal strategy for Blackjack but also to push the boundaries of what's possible in the realm of RL. 
+
+Through continuous experimentation and development, BlackJackRL will also contribute new algorithms to the field, enhancing the understanding and application of reinforcement learning in complex decision-making scenarios.
 
 ## Objectives
 - To apply and compare different reinforcement learning algorithms in the context of Blackjack.
+
 - To identify the most effective strategies for winning at Blackjack using BlackBox AI techniques.
+
 - To develop new reinforcement learning algorithms based on the insights gained from existing methods.
+
 - Use the weights and strategies learned to put the model to the test in a real online casino.
 
 ## Features
 - **Flexible Environment**: Simulates the game of Blackjack, allowing for various rule sets and configurations.
+
 - **Algorithm Comparison**: Implements and evaluates multiple reinforcement learning algorithms to find the most effective strategies.
+
 - **Strategy Visualization**: Provides tools for visualizing the strategies learned by the reinforcement learning models.
+
 - **Performance Metrics**: Tracks and displays performance metrics to measure the effectiveness of different strategies and algorithms.
 
 ## Getting Started
@@ -74,5 +84,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - The developers and contributors of the open-source reinforcement learning libraries used in this project.
 - The creators of the original Blackjack game, which has provided the inspiration for this project.
 - The broader reinforcement learning community, whose work continues to push the boundaries of what's possible in the field.
+
+@misc{labml,
+ author = {Varuna Jayasiri, Nipun Wijerathne},
+ title = {labml.ai Annotated Paper Implementations},
+ year = {2020},
+ url = {https://nn.labml.ai/},
+}
 
 
