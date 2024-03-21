@@ -85,11 +85,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - The creators of the original Blackjack game, which has provided the inspiration for this project.
 - The broader reinforcement learning community, whose work continues to push the boundaries of what's possible in the field.
 
-@misc{labml,
- author = {Varuna Jayasiri, Nipun Wijerathne},
- title = {labml.ai Annotated Paper Implementations},
- year = {2020},
- url = {https://nn.labml.ai/},
-}
+## Authors
+- Antonio van Dyck
 
 
