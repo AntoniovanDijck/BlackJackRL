@@ -1,5 +1,4 @@
 ### WIP ###
-### CUDA ONLY ###
 
 # MuZero Algorithm
 # MuZero is a model-based reinforcement learning algorithm that learns a model of the environment and uses it to plan.
@@ -163,7 +162,7 @@ class MuZeroAgent(Player):
         self.network = MuZeroNetwork(state_size, action_size).to(self.config.device)
         self.optimizer = optim.Adam(self.network.parameters(), lr=self.config.learning_rate)
         self.replay_buffer = ReplayBuffer(capacity=1000)
-        self.scaler = GradScaler()  # For mixed precision training
+        #self.scaler = GradScaler()  # For mixed precision training
     def store_transition(self, state, action, reward, next_state, done):
         self.replay_buffer.add(state, action, reward, next_state, done)
 
@@ -183,34 +182,33 @@ class MuZeroAgent(Player):
             return np.random.choice(len(policy[0]), p=policy[0].cpu().numpy())
 
     def train_step(self, batch):
-        # A simplified training step, assuming `batch` is a tuple of (states, actions, rewards, next_states, dones)
         states, actions, rewards, next_states, dones = batch
-        actions = actions.unsqueeze(-1)
-        rewards = rewards.unsqueeze(-1)
-        dones = dones.unsqueeze(-1)
+        states = torch.FloatTensor(states).to(self.config.device)
+        actions = torch.LongTensor(actions).unsqueeze(-1).to(self.config.device)
+        rewards = torch.FloatTensor(rewards).unsqueeze(-1).to(self.config.device)
+        next_states = torch.FloatTensor(next_states).to(self.config.device)
+        dones = torch.FloatTensor(dones).unsqueeze(-1).to(self.config.device)
         
-        with autocast():  # Mixed precision context
-            _, _, hidden_states, _ = self.network(states)
-            _, _, next_hidden_states, _ = self.network(next_states, actions)
-            _, value, _, _ = self.network(states)
-            _, next_value, _, _ = self.network(next_states)
+        # Simulate network forward passes and compute losses
+        _, _, hidden_states, _ = self.network(states)
+        _, _, next_hidden_states, _ = self.network(next_states, actions)
+        _, value, _, _ = self.network(states)
+        _, next_value, _, _ = self.network(next_states)
 
-            # Simplified loss calculation
-            value_loss = ((rewards + self.config.gamma * next_value * (1 - dones) - value) ** 2).mean()
-            reward_loss = torch.tensor(0)  # Placeholder for reward prediction loss
-            policy_loss = torch.tensor(0)  # Placeholder for policy loss
+        value_loss = ((rewards + self.config.gamma * next_value * (1 - dones) - value) ** 2).mean()
+        reward_loss = torch.tensor(0)  # Placeholder for reward prediction loss
+        policy_loss = torch.tensor(0)  # Placeholder for policy loss
 
-            loss = value_loss + reward_loss + policy_loss
+        loss = value_loss + reward_loss + policy_loss
 
         self.optimizer.zero_grad()
-        self.scaler.scale(loss).backward()
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
+        loss.backward()
+        self.optimizer.step()
 
 
 class Config:
     def __init__(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "mps")
+        self.device = torch.device("mps" if torch.cuda.is_available() else "cpu")
         self.learning_rate = 1e-3
         self.gamma = 0.99  # Discount factor for future rewards
         self.num_simulations = 10  # Number of MCTS simulations
@@ -320,6 +318,7 @@ def train_network(agent, config, episodes):
                 next_states = torch.FloatTensor(next_states).to(config.device)
                 dones = torch.FloatTensor(dones).unsqueeze(-1).to(config.device)
                 agent.train_step((states, actions, rewards, next_states, dones))
+                print(f"Episode {episode}: Network updated")
 
 class ReplayBuffer:
     def __init__(self, capacity):
@@ -339,5 +338,5 @@ class ReplayBuffer:
 # train the agent
 config = Config()
 agent = MuZeroAgent(state_size=3, action_size=2, config=config)
-train_network(agent, config, episodes=100)
+train_network(agent, config, episodes=10000)
             
