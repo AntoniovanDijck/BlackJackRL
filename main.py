@@ -6,14 +6,17 @@ from helpers.test import test_agent
 from helpers.train import train_agent
 
 def main():
+ 
+    # FOR TRAINING UNCOMMENT THE FOLLOWING LINES:
 
-    rounds = 100
+    # print(f"\nTraining the agent for {training_rounds} rounds:")
+    # training_rounds = 1000
+    # train_agent(training_rounds)
 
-    train_agent(rounds)
-    print(f"\nTraining the agent for {rounds} rounds:")
-
+    # TESTING THE LATEST WEIGHTS
     print("\nTesting the trained agent with detailed metrics and plotting performance:")
-    test_agent(rounds=1000, report_interval=1)
+    testing_rounds = 100
+    test_agent(rounds=testing_rounds, report_interval=1)
 
 if __name__ == "__main__":
     main()
