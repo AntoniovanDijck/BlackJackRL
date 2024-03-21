@@ -3,25 +3,13 @@
 # 21-03-2024
 # 
 
-import os
 import torch
-import pickle
 import random
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-import matplotlib.pyplot as plt
-import tensorflow as tf
 from collections import deque
-from tqdm import tqdm
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.optimizers import Adam
 from classes.game.player import Player
-from classes.game.dealer import Dealer
-from classes.game.deck import Deck
-from classes.game.card import Card
-from classes.game.blackjack import BlackjackGame
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "mps")

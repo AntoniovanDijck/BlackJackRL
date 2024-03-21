@@ -4,19 +4,9 @@
 # 
 
 import numpy as np
-from tqdm import tqdm
-import pickle
-import matplotlib.pyplot as plt
-import random
-from collections import deque
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.optimizers import Adam
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import os
+from classes.game.dealer import Dealer
+from classes.game.deck import Deck
+from classes.algorithm.dqn import DQNAgent
 
 class BlackjackGame:
     def __init__(self):
