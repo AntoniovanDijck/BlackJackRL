@@ -221,7 +221,6 @@ class MuZeroAgent(Player):
         loss.backward()
         self.optimizer.step()
 
-
 class ReplayBuffer:
 
     def __init__(self, capacity):
@@ -321,7 +320,6 @@ def simulate(agent, state, config):
 
     return root
 
-
 def select_action(agent, state, config, deterministic=False):
     root = simulate(agent, state, config)
     visit_counts = [(child.visit_count, action) for action, child in root.children.items()]
@@ -333,7 +331,7 @@ def select_action(agent, state, config, deterministic=False):
         action = np.random.choice([action for _, action in visit_counts], p=probs)
     return action
           
-def train_network(episodes):
+def train_mu0_network(episodes):
     config = Config()
     agent = MuZeroAgent(state_size=3, action_size=2, config=config)
     env = BlackjackEnvironment()
@@ -371,8 +369,6 @@ def train_network(episodes):
     # Save the trained agent
     torch.save(agent.network.state_dict(), "weights/muzero.pth")
     print("Agent saved successfully")
-
-
 
 #Test the agent
 def test_m0_agent(weight_filename="weights/muzero.pth", env=BlackjackEnvironment(), episodes=100):
@@ -427,7 +423,65 @@ def test_m0_agent(weight_filename="weights/muzero.pth", env=BlackjackEnvironment
     return outcomes
 
 # train the agent
-train_network(episodes=100000)
+train_mu0_network(episodes=100000000)
 
 # test the agent
-test_m0_agent(episodes=10000)
+test_m0_agent(episodes=100)
+
+#test the agent with kk game
+def play_against_agent():
+    env = BlackjackEnvironment()
+    agent = MuZeroAgent(state_size=3, action_size=2, config=Config())
+
+    # Load the trained agent
+    weight_filename = "weights/muzero.pth"
+    agent.load(weight_filename)
+    
+    state = env.reset()
+    done = False
+    while not done:
+        # Display current player and dealer cards
+        print("Player's hand:", [f"{card.rank} of {card.suit}" for card in env.player.hand], f"Value: {env.player.value}")
+        print("Dealer's hand: [Hidden], {0} of {1}".format(env.dealer.hand[1].rank, env.dealer.hand[1].suit))
+        
+        # Player's turn
+        action = input("Choose your action (Hit = 0 / Stand = 1): ")
+        while action not in ["0", "1"]:
+            action = input("Invalid input. Choose your action (Hit = 0 / Stand = 1): ")
+        action = int(action)
+        
+        if action == 0:
+            print("Player hits.")
+        else:
+            print("Player stands.")
+            done = True
+
+        state, reward, done, _ = env.step(action)
+
+        if done:
+            # It's the dealer's (agent's) turn. The agent plays until the game ends.
+            print("Dealer's turn.")
+            while done:
+                action = agent.select_action(state, deterministic=True)  # Agent makes a decision
+                state, reward, done, _ = env.step(action)  # Update the environment based on the agent's action
+                print("Dealer's hand:", [f"{card.rank} of {card.suit}" for card in env.dealer.hand], f"Value: {env.dealer.value}")
+                if action == 0:
+                    print("Dealer hits.")
+                else:
+                    print("Dealer stands.")
+                    break
+
+    # Final outcome
+    print("\nFinal Hands:")
+    print("Player's hand:", [f"{card.rank} of {card.suit}" for card in env.player.hand], f"Value: {env.player.value}")
+    print("Dealer's hand:", [f"{card.rank} of {card.suit}" for card in env.dealer.hand], f"Value: {env.dealer.value}")
+    if reward == 1:
+        print("Player wins!")
+    elif reward == -1:
+        print("Dealer wins!")
+    else:
+        print("It's a draw.")
+
+# Now, let's play!
+play_against_agent()
+
