@@ -9,6 +9,7 @@ import math
 import matplotlib.pyplot as plt
 from collections import Counter
 from tqdm import tqdm
+import os 
 
 class BlackjackEnvironment:
     def __init__(self):
@@ -31,33 +32,36 @@ class BlackjackEnvironment:
         return self.get_state()
 
     def step(self, action):
-        # Execute the action (hit or stand) and return the new state, reward, and done status
         done = False
         reward = 0
         
-        if action == 0:  # Assuming 0 is 'hit' and 1 is 'stand'
+        if action == 0:  # hit
             self.player.add_card(self.deck.deal())
             if self.player.value > 21:
                 done = True
-                reward = -1  # Assuming the reward for busting is -1
-                
-        # Dealer's turn to play if player stands or after hitting
-        if action == 1 or self.player.value > 21:
+                reward = -1  # Lose by going over
+            
+        if action == 1 or self.player.value > 21:  # stand or bust
             while self.dealer.value < 17:
                 self.dealer.add_card(self.deck.deal())
             done = True
-            # Determine the reward based on the game outcome
-            
-        # Update this method to determine the reward based on the final outcomes
+            if self.player.value > 21:
+                reward = -1  # Player busts
+            elif self.dealer.value > 21 or self.player.value > self.dealer.value:
+                reward = 1  # Win by dealer busting or having a higher value
+            elif self.player.value < self.dealer.value:
+                reward = -1  # Lose by having a lower value
+            else:
+                reward = 0  # Draw
+
         return self.get_state(), reward, done, {}
+
     
     def get_state(self):
         # Implement a method to retrieve the current state
         # Could be as simple as the player's and dealer's current values and whether the player has an ace
         state = [self.player.value, self.dealer.show_first_card().value if self.dealer.show_first_card() else 0, int(any(card.rank == 'Ace' for card in self.player.hand))]
         return np.array(state, dtype=np.float32)
-
-
 
 class Card:
     def __init__(self, rank, suit):
@@ -151,7 +155,6 @@ class MuZeroNetwork(nn.Module):
         value = self.prediction_value(hidden_state)
         return policy, value, hidden_state, reward
 
-
 class Config:
     def __init__(self):
         self.device = torch.device("mps" if torch.cuda.is_available() else "cpu")
@@ -164,6 +167,7 @@ class Config:
         self.update_frequency = 10  # How often to update the network
 
 class MuZeroAgent(Player):
+
     def __init__(self, state_size=3, action_size=2, config=Config()):
         self.state_size = state_size
         self.action_size = action_size
@@ -201,26 +205,38 @@ class MuZeroAgent(Player):
         next_states = torch.FloatTensor(next_states).to(self.config.device)
         dones = torch.FloatTensor(dones).unsqueeze(-1).to(self.config.device)
         
-        # Simulate network forward passes and compute losses
-        _, _, hidden_states, _ = self.network(states)
-        _, _, next_hidden_states, _ = self.network(next_states, actions)
-        _, value, _, _ = self.network(states)
+        # Forward pass
+        _, _, hidden_states, predicted_rewards = self.network(states, actions)
         _, next_value, _, _ = self.network(next_states)
+        _, value, _, _ = self.network(states)
+        
+        # Compute losses
+        value_loss = ((rewards + self.config.gamma * next_value.detach() * (1 - dones) - value) ** 2).mean()
+        reward_loss = ((predicted_rewards - rewards) ** 2).mean()  # Reward prediction loss
 
-        value_loss = ((rewards + self.config.gamma * next_value * (1 - dones) - value) ** 2).mean()
-        reward_loss = torch.tensor(0)  # Placeholder for reward prediction loss
-        policy_loss = torch.tensor(0)  # Placeholder for policy loss
+        loss = value_loss + reward_loss
 
-        loss = value_loss + reward_loss + policy_loss
-
+        # Backpropagation
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
 
-# Test
-#config = Config()
-#agent = MuZeroAgent(state_size=10, action_size=2, config=config)
+class ReplayBuffer:
+
+    def __init__(self, capacity):
+        self.buffer = deque(maxlen=capacity)
+
+    def add(self, state, action, reward, next_state, done):
+        self.buffer.append((state, action, reward, next_state, done))
+
+    def sample(self, batch_size):
+        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
+        state, action, reward, next_state, done = zip(*[self.buffer[idx] for idx in indices])
+        return np.array(state), np.array(action), np.array(reward), np.array(next_state), np.array(done)
+
+    def __len__(self):
+        return len(self.buffer)
 
 class Node:
     def __init__(self, prior):
@@ -263,24 +279,45 @@ def select_child(node):
 def simulate(agent, state, config):
     # Convert state to tensor
     state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.config.device)
-    
-    # Initial prediction from the representation
+
+    # Initial prediction from the representation function
     policy, value, hidden_state, _ = agent.network(state_tensor)
-    
+
     root = Node(0)
-    # You should adjust this based on how your Node class and expand_node function are designed
     actions_priors = policy.squeeze().tolist()  # Assuming policy is a tensor of action probabilities
     expand_node(root, agent.action_size, actions_priors)
 
     for _ in range(config.num_simulations):
         node = root
         search_path = [node]
+        done = False
+        virtual_reward = 0
+        virtual_state = hidden_state
 
         while node.expanded():
             action, node = select_child(node)
             search_path.append(node)
+            
+            # Predict next state and reward using the dynamics function
+            action_tensor = torch.tensor([[action]], dtype=torch.float32).to(agent.config.device)
+            with torch.no_grad():
+                _, _, virtual_state, virtual_reward_tensor = agent.network(None, action_tensor, virtual_state)
+                virtual_reward += virtual_reward_tensor.item()
+
+            if done:
+                break
+
+        # Update tree with the simulation results
+        for node in reversed(search_path):
+            node.visit_count += 1
+            node.value_sum += virtual_reward  # Update with the cumulative reward from the simulation
         
-        # Here, you would simulate the dynamics function but let's fix the basics first.
+        # If not done, expand the new node
+        if not done:
+            # Use the policy from the last predicted state to expand the node
+            policy, _, _, _ = agent.network(None, None, virtual_state)
+            actions_priors = policy.squeeze().tolist()
+            expand_node(node, agent.action_size, actions_priors)
 
     return root
 
@@ -295,14 +332,19 @@ def select_action(agent, state, config, deterministic=False):
         probs = [visit_count / visit_count_sum for visit_count, _ in visit_counts]
         action = np.random.choice([action for _, action in visit_counts], p=probs)
     return action
-
-            
+          
 def train_network(episodes):
     config = Config()
     agent = MuZeroAgent(state_size=3, action_size=2, config=config)
     env = BlackjackEnvironment()
     #load trained weights
-    agent.load("weights/muzero.pth")
+    #check if the file exists
+    if os.path.exists("weights/muzero.pth"):
+        agent.load("weights/muzero.pth")
+        print("Agent loaded successfully")
+    else:
+        print("No weights found, training from scratch")
+    
 
     for episode in tqdm(range(episodes)):
         state = env.reset()
@@ -330,20 +372,6 @@ def train_network(episodes):
     torch.save(agent.network.state_dict(), "weights/muzero.pth")
     print("Agent saved successfully")
 
-class ReplayBuffer:
-    def __init__(self, capacity):
-        self.buffer = deque(maxlen=capacity)
-
-    def add(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
-
-    def sample(self, batch_size):
-        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
-        state, action, reward, next_state, done = zip(*[self.buffer[idx] for idx in indices])
-        return np.array(state), np.array(action), np.array(reward), np.array(next_state), np.array(done)
-
-    def __len__(self):
-        return len(self.buffer)
 
 
 #Test the agent
@@ -397,9 +425,9 @@ def test_m0_agent(weight_filename="weights/muzero.pth", env=BlackjackEnvironment
     plt.show()
 
     return outcomes
-    
+
 # train the agent
-train_network(episodes=10000)
+train_network(episodes=100000)
 
 # test the agent
 test_m0_agent(episodes=10000)
