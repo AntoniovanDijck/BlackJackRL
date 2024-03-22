@@ -1,9 +1,4 @@
-### WIP ###
-
 # MuZero Algorithm
-# MuZero is a model-based reinforcement learning algorithm that learns a model of the environment and uses it to plan.
-# The algorithm is based on the AlphaZero algorithm, which is a model-free reinforcement learning algorithm.
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -11,6 +6,9 @@ import numpy as np
 from torch.cuda.amp import GradScaler, autocast
 from collections import deque
 import math
+import matplotlib.pyplot as plt
+from collections import Counter
+from tqdm import tqdm
 
 class BlackjackEnvironment:
     def __init__(self):
@@ -154,8 +152,19 @@ class MuZeroNetwork(nn.Module):
         return policy, value, hidden_state, reward
 
 
+class Config:
+    def __init__(self):
+        self.device = torch.device("mps" if torch.cuda.is_available() else "cpu")
+        self.learning_rate = 1e-3
+        self.gamma = 0.99  # Discount factor for future rewards
+        self.num_simulations = 10  # Number of MCTS simulations
+        self.update_frequency = 10 # How often to update the network
+        self.batch_size = 32 # Batch size for training
+        self.hidden_state_size = 128  # Size of the hidden state in the network
+        self.update_frequency = 10  # How often to update the network
+
 class MuZeroAgent(Player):
-    def __init__(self, state_size, action_size, config):
+    def __init__(self, state_size=3, action_size=2, config=Config()):
         self.state_size = state_size
         self.action_size = action_size
         self.config = config
@@ -180,6 +189,9 @@ class MuZeroAgent(Player):
             return policy.argmax(dim=-1).item()
         else:
             return np.random.choice(len(policy[0]), p=policy[0].cpu().numpy())
+        
+    def load(self, name):
+        self.network.load_state_dict(torch.load(name))
 
     def train_step(self, batch):
         states, actions, rewards, next_states, dones = batch
@@ -205,17 +217,6 @@ class MuZeroAgent(Player):
         loss.backward()
         self.optimizer.step()
 
-
-class Config:
-    def __init__(self):
-        self.device = torch.device("mps" if torch.cuda.is_available() else "cpu")
-        self.learning_rate = 1e-3
-        self.gamma = 0.99  # Discount factor for future rewards
-        self.num_simulations = 10  # Number of MCTS simulations
-        self.update_frequency = 10 # How often to update the network
-        self.batch_size = 32 # Batch size for training
-        self.hidden_state_size = 128  # Size of the hidden state in the network
-        self.update_frequency = 10  # How often to update the network
 
 # Test
 #config = Config()
@@ -296,9 +297,14 @@ def select_action(agent, state, config, deterministic=False):
     return action
 
             
-def train_network(agent, config, episodes):
+def train_network(episodes):
+    config = Config()
+    agent = MuZeroAgent(state_size=3, action_size=2, config=config)
     env = BlackjackEnvironment()
-    for episode in range(episodes):
+    #load trained weights
+    agent.load("weights/muzero.pth")
+
+    for episode in tqdm(range(episodes)):
         state = env.reset()
         done = False
         while not done:
@@ -318,7 +324,11 @@ def train_network(agent, config, episodes):
                 next_states = torch.FloatTensor(next_states).to(config.device)
                 dones = torch.FloatTensor(dones).unsqueeze(-1).to(config.device)
                 agent.train_step((states, actions, rewards, next_states, dones))
-                print(f"Episode {episode}: Network updated")
+                #print(f"Episode {episode}: Network updated")
+
+    # Save the trained agent
+    torch.save(agent.network.state_dict(), "weights/muzero.pth")
+    print("Agent saved successfully")
 
 class ReplayBuffer:
     def __init__(self, capacity):
@@ -335,8 +345,61 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
+
+#Test the agent
+def test_m0_agent(weight_filename="weights/muzero.pth", env=BlackjackEnvironment(), episodes=100):
+    #load the trained agent
+    agent = MuZeroAgent(state_size=3, action_size=2, config=Config())
+
+    outcomes = Counter()
+
+    #load trained weights
+    agent.load(weight_filename)
+
+    for _ in tqdm(range(episodes)):
+        state = env.reset()
+        done = False
+        while not done:
+            action = agent.select_action(state, deterministic=True)
+            next_state, reward, done, _ = env.step(action)
+            state = next_state
+
+        # Determine the game outcome based on final states and rewards
+        if reward == 1:
+            if env.player.value <= 21 and env.dealer.value < env.player.value or env.dealer.value > 21:
+                outcomes['Player wins'] += 1
+            else:
+                outcomes['Dealer wins'] += 1
+        elif reward == -1:
+            if env.player.value > 21:
+                outcomes['Player busts'] += 1
+            else:
+                outcomes['Dealer wins'] += 1
+        else:
+            if env.player.value == env.dealer.value:
+                outcomes['Push'] += 1
+            elif env.dealer.value > 21:
+                outcomes['Dealer busts'] += 1
+                
+
+    # Displaying the outcomes
+    print("Game outcomes:")
+    for outcome, count in outcomes.items():
+        print(f"{outcome}: {count}")
+
+    # Optional: Plotting the outcomes if needed
+    labels, values = zip(*outcomes.items())
+    indexes = np.arange(len(labels))
+    width = 1
+
+    plt.bar(indexes, values, width)
+    plt.xticks(indexes + width * 0.5, labels, rotation='vertical')
+    plt.show()
+
+    return outcomes
+    
 # train the agent
-config = Config()
-agent = MuZeroAgent(state_size=3, action_size=2, config=config)
-train_network(agent, config, episodes=10000)
-            
+train_network(episodes=10000)
+
+# test the agent
+test_m0_agent(episodes=10000)
